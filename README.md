@@ -1,4 +1,4 @@
-# Firebase Studio
+# WebCrawler Scrapy
 
 This is a NextJS starter in WebCrawler.ir.
 
