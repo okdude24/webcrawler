@@ -25,7 +25,7 @@ export default function Home() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen">
-      <h1 className="text-2xl font-bold mb-4">جستجوگر وب</h1>
+      <h1 className="text-2xl font-bold mb-4">خزنده وب</h1>
 
       <div className="flex w-full max-w-md space-x-2">
         <Input
