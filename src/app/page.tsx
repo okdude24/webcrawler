@@ -220,9 +220,9 @@ export default function Home() {
               <span>خزنده وب - موتور جستجوی هوشمند</span>
             </p>
             <div className="flex items-center gap-4">
-              <span>پشتیبانی از زبان فارسی</span>
+              <span>خزشگر وب</span>
               <span>•</span>
-              <span>توسعه‌دهندگان ایرانی</span>
+              <span>اسکرپی</span>
             </div>
           </div>
         </div>
