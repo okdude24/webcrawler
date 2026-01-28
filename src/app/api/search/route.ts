@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import ZAI from 'z-ai-web-dev-sdk'
+import { performWebSearch, generateImage } from '@/lib/zai-client'
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
@@ -16,21 +16,17 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    console.log('[API] Initializing ZAI SDK...')
-    const zai = await ZAI.create()
-    console.log('[API] ZAI SDK initialized successfully')
-
     // Handle different search types
     switch (type) {
       case 'images':
-        return await handleImageSearch(zai, query)
+        return await handleImageSearch(query)
 
       case 'news':
-        return await handleNewsSearch(zai, query)
+        return await handleNewsSearch(query)
 
       case 'all':
       default:
-        return await handleAllSearch(zai, query)
+        return await handleAllSearch(query)
     }
   } catch (error) {
     console.error('[API] Search error:', error)
@@ -55,13 +51,10 @@ export async function GET(request: NextRequest) {
   }
 }
 
-async function handleAllSearch(zai: any, query: string) {
+async function handleAllSearch(query: string) {
   console.log('[API] Performing web search for:', query)
 
-  const results = await zai.functions.invoke('web_search', {
-    query: query.trim(),
-    num: 10
-  })
+  const results = await performWebSearch(query, 10)
 
   console.log('[API] Web search results count:', Array.isArray(results) ? results.length : 0)
 
@@ -84,7 +77,7 @@ async function handleAllSearch(zai: any, query: string) {
   })
 }
 
-async function handleImageSearch(zai: any, query: string) {
+async function handleImageSearch(query: string) {
   console.log('[API] Performing image search for:', query)
 
   // Generate 4 images related to search query
@@ -106,13 +99,11 @@ async function handleImageSearch(zai: any, query: string) {
     ]
 
     imagePromises.push(
-      zai.images.generations.create({
-        prompt: safePrompts[i],
-        size: '1024x1024'
-      }).catch((error: Error) => {
-        console.error(`[API] Image generation ${i + 1} failed:`, error.message)
-        return null
-      })
+      generateImage(safePrompts[i])
+        .catch((error: Error) => {
+          console.error(`[API] Image generation ${i + 1} failed:`, error.message)
+          return null
+        })
     )
   }
 
@@ -137,17 +128,14 @@ async function handleImageSearch(zai: any, query: string) {
   })
 }
 
-async function handleNewsSearch(zai: any, query: string) {
+async function handleNewsSearch(query: string) {
   console.log('[API] Performing news search for:', query)
 
   // Add news-related keywords to search for recent news
   const newsQuery = `${query} news latest today breaking news اخبار جدید`
   console.log('[API] News query:', newsQuery)
 
-  const results = await zai.functions.invoke('web_search', {
-    query: newsQuery.trim(),
-    num: 10
-  })
+  const results = await performWebSearch(newsQuery, 10)
 
   console.log('[API] News search results count:', Array.isArray(results) ? results.length : 0)
 
