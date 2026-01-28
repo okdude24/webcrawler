@@ -1,4 +1,8 @@
+import { NextResponse } from 'next/server'
 import ZAI from 'z-ai-web-dev-sdk'
+
+// Hardcode API key directly - no config file lookups
+const API_KEY = 'AIzaSyCPKy-h2rZ-v1DC9mK9sTUnYJ11ZisLwDg'
 
 // ZAI client singleton
 let zaiInstance: any = null
@@ -8,49 +12,16 @@ export async function getZAIInstance() {
     return zaiInstance
   }
 
+  console.log('[ZAI Client] Initializing SDK with hardcoded API key...')
+  console.log('[ZAI Client] API Key (first 10):', API_KEY.substring(0, 10) + '...')
+
   try {
-    // Hardcode API key and try different option names
-    const apiKey = 'AIzaSyCPKy-h2rZ-v1DC9mK9sTUnYJ11ZisLwDg'
-    
-    console.log('[ZAI Client] Attempting initialization with API key...')
-    console.log('[ZAI Client] API Key (first 10 chars):', apiKey.substring(0, 10) + '...')
-    console.log('[ZAI Client] Environment NODE_ENV:', process.env.NODE_ENV)
-    
-    // Try option name variations
-    try {
-      console.log('[ZAI Client] Trying option name: apiKey')
-      zaiInstance = await ZAI.create({ apiKey })
-      console.log('[ZAI Client] ✓ Success with "apiKey" option')
-      return zaiInstance
-    } catch (option1Error) {
-      console.error('[ZAI Client] ✗ Failed with "apiKey" option:', option1Error)
-      
-      try {
-        console.log('[ZAI Client] Trying option name: api_key')
-        zaiInstance = await ZAI.create({ api_key: apiKey })
-        console.log('[ZAI Client] ✓ Success with "api_key" option')
-        return zaiInstance
-      } catch (option2Error) {
-        console.error('[ZAI Client] ✗ Failed with "api_key" option:', option2Error)
-        
-        try {
-          console.log('[ZAI Client] Trying option name: key')
-          zaiInstance = await ZAI.create({ key: apiKey })
-          console.log('[ZAI Client] ✓ Success with "key" option')
-          return zaiInstance
-        } catch (option3Error) {
-          console.error('[ZAI Client] ✗ Failed with "key" option:', option3Error)
-          
-          // Last resort - bare initialization
-          console.log('[ZAI Client] Trying bare initialization (no config)')
-          zaiInstance = await ZAI.create()
-          console.log('[ZAI Client] ✓ Bare initialization succeeded')
-          return zaiInstance
-        }
-      }
-    }
+    // Direct initialization with API key - bypass all config lookups
+    zaiInstance = await ZAI.create({ apiKey: API_KEY })
+    console.log('[ZAI Client] ✓ ZAI instance created successfully')
+    return zaiInstance
   } catch (error) {
-    console.error('[ZAI Client] All initialization methods failed:', error)
+    console.error('[ZAI Client] Initialization failed:', error)
     throw new Error('Failed to initialize ZAI SDK: ' + (error instanceof Error ? error.message : String(error)))
   }
 }
@@ -65,7 +36,7 @@ export async function performWebSearch(query: string, num: number = 10) {
       num
     })
 
-    console.log('[ZAI Client] Web search completed, results:', Array.isArray(results) ? results.length : 'not an array')
+    console.log('[ZAI Client] ✓ Web search completed, results:', Array.isArray(results) ? results.length : 0)
     return results
   } catch (error) {
     console.error('[ZAI Client] Web search error:', error)
@@ -83,7 +54,7 @@ export async function generateImage(prompt: string, size: string = '1024x1024') 
       size
     })
 
-    console.log('[ZAI Client] Image generation completed')
+    console.log('[ZAI Client] ✓ Image generation completed')
     return response
   } catch (error) {
     console.error('[ZAI Client] Image generation error:', error)
