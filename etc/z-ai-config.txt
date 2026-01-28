@@ -1,3 +1,0 @@
-{
-  "apiKey": "AIzaSyCPKy-h2rZ-v1DC9mK9sTUnYJ11ZisLwDg"
-}
