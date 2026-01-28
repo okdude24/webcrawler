@@ -19,43 +19,22 @@ export async function getZAIInstance() {
     console.log('[ZAI Client] Environment check:', {
       hasApiKey: !!apiKey,
       apiKeyLength: apiKey?.length || 0,
-      envNodeEnv: process.env.NODE_ENV,
-      allEnvKeys: Object.keys(process.env).filter(k => k.includes('ZAI'))
+      envNodeEnv: process.env.NODE_ENV
     })
 
-    // Try multiple initialization methods
-    try {
-      if (apiKey && apiKey.trim() !== '') {
-        console.log('[ZAI Client] Method 1: Using API key from environment')
-        console.log('[ZAI Client] API Key (first 10):', apiKey.substring(0, 10) + '...')
-        zaiInstance = await ZAI.create({ apiKey })
-      } else {
-        console.log('[ZAI Client] Method 2: Using SDK default configuration')
-        zaiInstance = await ZAI.create()
-      }
-    } catch (method1Error) {
-      console.error('[ZAI Client] Method 1 failed, trying Method 2:', method1Error)
-      
-      // Try with explicit empty config
-      try {
-        console.log('[ZAI Client] Method 2: Trying with explicit config')
-        zaiInstance = await ZAI.create({
-          apiKey: apiKey || undefined,
-          configPath: undefined
-        })
-      } catch (method2Error) {
-        console.error('[ZAI Client] Method 2 failed, trying Method 3:', method2Error)
-        
-        // Final attempt - bare initialization
-        console.log('[ZAI Client] Method 3: Bare initialization')
-        zaiInstance = await ZAI.create()
-      }
+    if (apiKey && apiKey.trim() !== '') {
+      console.log('[ZAI Client] Using API key from environment variable')
+      console.log('[ZAI Client] API key (first 10 chars):', apiKey.substring(0, 10) + '...')
+      zaiInstance = await ZAI.create({ apiKey })
+    } else {
+      console.log('[ZAI Client] No API key found, using SDK default configuration')
+      zaiInstance = await ZAI.create()
     }
 
     console.log('[ZAI Client] ZAI instance created successfully')
     return zaiInstance
   } catch (error) {
-    console.error('[ZAI Client] All initialization methods failed:', error)
+    console.error('[ZAI Client] Initialization failed:', error)
     initializationError = error instanceof Error ? error : new Error(String(error))
     throw initializationError
   }

@@ -11,5 +11,8 @@
     "NODE_ENV": "production",
     "PORT": "3000",
     "ZAI_API_KEY": "AIzaSyCPKy-h2rZ-v1DC9mK9sTUnYJ11ZisLwDg"
+  },
+  "hooks": {
+    "build": "npm install"
   }
 }
