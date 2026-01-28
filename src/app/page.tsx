@@ -1,11 +1,15 @@
 'use client'
 
-import { useState } from 'react'
-import { Search, Globe, Clock, ExternalLink } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Search, Globe, Clock, ExternalLink, Image as ImageIcon, Newspaper, AlertCircle } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+
+type SearchType = 'all' | 'images' | 'news'
 
 interface SearchResult {
   url: string
@@ -17,34 +21,96 @@ interface SearchResult {
   favicon?: string
 }
 
+interface ImageResult {
+  url: string
+  base64?: string
+  prompt?: string
+}
+
 export default function Home() {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResult[]>([])
+  const [images, setImages] = useState<ImageResult[]>([])
+  const [news, setNews] = useState<SearchResult[]>([])
   const [loading, setLoading] = useState(false)
   const [hasSearched, setHasSearched] = useState(false)
+  const [searchType, setSearchType] = useState<SearchType>('all')
+  const [error, setError] = useState<string | null>(null)
 
-  const handleSearch = async (e?: React.FormEvent) => {
+  const handleSearch = async (e?: React.FormEvent, type: SearchType = 'all') => {
     e?.preventDefault()
 
     if (!query.trim()) return
 
     setLoading(true)
     setHasSearched(true)
+    setError(null)
     setResults([])
+    setImages([])
+    setNews([])
 
     try {
-      const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`)
+      const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&type=${type}`)
       const data = await response.json()
+
+      console.log('[Frontend] API response:', data)
+
+      if (!response.ok) {
+        throw new Error(data.error || 'خطا در ارتباط با سرور')
+      }
 
       if (data.results) {
         setResults(data.results)
       }
+      if (data.images) {
+        setImages(data.images)
+      }
+      if (data.news) {
+        setNews(data.news)
+      }
     } catch (error) {
-      console.error('Search error:', error)
+      console.error('[Frontend] Search error:', error)
+      const errorMessage = error instanceof Error ? error.message : 'خطا نامشخص رخ داد'
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
   }
+
+  // Auto-search when tab changes if query exists
+  useEffect(() => {
+    if (query.trim() && hasSearched) {
+      setLoading(true)
+      setError(null)
+      setResults([])
+      setImages([])
+      setNews([])
+
+      fetch(`/api/search?q=${encodeURIComponent(query)}&type=${searchType}`)
+        .then(res => res.json())
+        .then(data => {
+          console.log('[Frontend] Tab change API response:', data)
+
+          if (data.results) {
+            setResults(data.results)
+          }
+          if (data.images) {
+            setImages(data.images)
+          }
+          if (data.news) {
+            setNews(data.news)
+          }
+        })
+        .catch(error => {
+          console.error('[Frontend] Search error on tab change:', error)
+          const errorMessage = error instanceof Error ? error.message : 'خطا نامشخص رخ داد'
+          setError(errorMessage)
+        })
+        .finally(() => {
+          setLoading(false)
+        })
+    }
+  }, [searchType])
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -67,7 +133,7 @@ export default function Home() {
             </div>
 
             {/* Search Bar */}
-            <form onSubmit={handleSearch} className="max-w-3xl mx-auto">
+            <form onSubmit={(e) => handleSearch(e, searchType)} className="max-w-3xl mx-auto">
               <div className="relative">
                 <Input
                   type="text"
@@ -87,6 +153,26 @@ export default function Home() {
                   {loading ? 'در حال جستجو...' : 'جستجو'}
                 </Button>
               </div>
+
+              {/* Search Type Tabs */}
+              <div className="flex justify-center mt-6">
+                <Tabs value={searchType} onValueChange={(v) => setSearchType(v as SearchType)} className="w-full max-w-lg">
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="all" className="flex items-center gap-2">
+                      <Search className="h-4 w-4" />
+                      همه
+                    </TabsTrigger>
+                    <TabsTrigger value="images" className="flex items-center gap-2">
+                      <ImageIcon className="h-4 w-4" />
+                      تصاویر
+                    </TabsTrigger>
+                    <TabsTrigger value="news" className="flex items-center gap-2">
+                      <Newspaper className="h-4 w-4" />
+                      اخبار
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
             </form>
 
             {/* Quick Suggestions */}
@@ -101,7 +187,7 @@ export default function Home() {
                       size="sm"
                       onClick={() => {
                         setQuery(suggestion)
-                        handleSearch()
+                        handleSearch(undefined, searchType)
                       }}
                       className="rounded-full text-sm"
                     >
@@ -118,20 +204,44 @@ export default function Home() {
         <section className="container mx-auto px-4 py-8 max-w-4xl">
           {loading && (
             <div className="space-y-6">
-              {[...Array(5)].map((_, i) => (
-                <Card key={i}>
-                  <CardContent className="p-6">
-                    <Skeleton className="h-6 w-3/4 mb-2" />
-                    <Skeleton className="h-4 w-1/2 mb-3" />
-                    <Skeleton className="h-4 w-full mb-2" />
-                    <Skeleton className="h-4 w-2/3" />
-                  </CardContent>
-                </Card>
-              ))}
+              {searchType === 'images' ? (
+                <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
+                  {[...Array(4)].map((_, i) => (
+                    <Card key={i}>
+                      <CardContent className="p-4">
+                        <Skeleton className="aspect-square w-full rounded-lg mb-3" />
+                        <Skeleton className="h-4 w-full" />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                [...Array(5)].map((_, i) => (
+                  <Card key={i}>
+                    <CardContent className="p-6">
+                      <Skeleton className="h-6 w-3/4 mb-2" />
+                      <Skeleton className="h-4 w-1/2 mb-3" />
+                      <Skeleton className="h-4 w-full mb-2" />
+                      <Skeleton className="h-4 w-2/3" />
+                    </CardContent>
+                  </Card>
+                ))
+              )}
             </div>
           )}
 
-          {!loading && hasSearched && results.length === 0 && (
+          {/* Error Display */}
+          {!loading && error && (
+            <Alert variant="destructive" className="mb-6">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>خطا در جستجو</AlertTitle>
+              <AlertDescription>
+                {error}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {!loading && hasSearched && !error && results.length === 0 && images.length === 0 && news.length === 0 && (
             <Card>
               <CardContent className="p-12 text-center">
                 <Globe className="h-16 w-16 text-muted-foreground mx-auto mb-4 opacity-50" />
@@ -143,16 +253,15 @@ export default function Home() {
             </Card>
           )}
 
+          {/* All Results */}
           {!loading && results.length > 0 && (
             <div className="space-y-6">
-              {/* Results Header */}
               <div className="flex items-center justify-between mb-6">
                 <p className="text-sm text-muted-foreground">
                   {results.length} نتیجه برای <span className="font-semibold text-foreground">"{query}"</span>
                 </p>
               </div>
 
-              {/* Results List */}
               <div className="space-y-4">
                 {results.map((result, index) => (
                   <Card
@@ -160,7 +269,6 @@ export default function Home() {
                     className="group hover:shadow-lg transition-shadow duration-300 border hover:border-primary/30"
                   >
                     <CardContent className="p-5 md:p-6">
-                      {/* URL and Favicon */}
                       <div className="flex items-center gap-2 mb-2">
                         {result.favicon && (
                           <img
@@ -185,7 +293,6 @@ export default function Home() {
                         )}
                       </div>
 
-                      {/* Title */}
                       <a
                         href={result.url}
                         target="_blank"
@@ -198,7 +305,92 @@ export default function Home() {
                         </h3>
                       </a>
 
-                      {/* Snippet */}
+                      <p className="text-sm md:text-base text-muted-foreground leading-relaxed line-clamp-2">
+                        {result.snippet}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Image Results */}
+          {!loading && images.length > 0 && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between mb-6">
+                <p className="text-sm text-muted-foreground">
+                  {images.length} تصویر برای <span className="font-semibold text-foreground">"{query}"</span>
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
+                {images.map((image, index) => (
+                  <Card
+                    key={index}
+                    className="group overflow-hidden hover:shadow-lg transition-shadow duration-300 border hover:border-primary/30"
+                  >
+                    <CardContent className="p-0">
+                      {image.base64 && (
+                        <img
+                          src={image.base64}
+                          alt={image.prompt || query}
+                          className="w-full aspect-square object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      )}
+                      {image.prompt && (
+                        <p className="p-3 text-sm text-muted-foreground line-clamp-2">
+                          {image.prompt}
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* News Results */}
+          {!loading && news.length > 0 && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between mb-6">
+                <p className="text-sm text-muted-foreground">
+                  {news.length} خبر برای <span className="font-semibold text-foreground">"{query}"</span>
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                {news.map((result, index) => (
+                  <Card
+                    key={index}
+                    className="group hover:shadow-lg transition-shadow duration-300 border hover:border-primary/30"
+                  >
+                    <CardContent className="p-5 md:p-6">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Newspaper className="h-4 w-4 text-primary" />
+                        <p className="text-xs md:text-sm text-muted-foreground font-mono" dir="ltr">
+                          {result.host_name}
+                        </p>
+                        {result.date && result.date !== 'N/A' && (
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground mr-auto">
+                            <Clock className="h-3 w-3" />
+                            <span>{result.date}</span>
+                          </span>
+                        )}
+                      </div>
+
+                      <a
+                        href={result.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group/link inline-block mb-2"
+                      >
+                        <h3 className="text-lg md:text-xl font-semibold text-primary hover:text-primary/80 transition-colors flex items-center gap-2">
+                          {result.name}
+                          <ExternalLink className="h-4 w-4 opacity-0 group-hover/link:opacity-100 transition-opacity" />
+                        </h3>
+                      </a>
+
                       <p className="text-sm md:text-base text-muted-foreground leading-relaxed line-clamp-2">
                         {result.snippet}
                       </p>
@@ -220,9 +412,9 @@ export default function Home() {
               <span>خزنده وب - موتور جستجوی هوشمند</span>
             </p>
             <div className="flex items-center gap-4">
-              <span>خزشگر وب</span>
+              <span>پشتیبانی از زبان فارسی</span>
               <span>•</span>
-              <span>اسکرپی</span>
+              <span>توسعه‌دهندگان ایرانی</span>
             </div>
           </div>
         </div>
